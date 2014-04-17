@@ -1,0 +1,117 @@
+#!/usr/bin/env ruby
+
+require 'base64'
+require 'openssl'
+require 'optparse'
+require 'ostruct'
+require 'pp'
+require 'time'
+require 'date'
+
+class HieraEhttpKeys
+    @banner = "Usage: hiera-ehttp keys [options]"
+    def self.parse(args)
+        options = OpenStruct.new
+        
+        
+        opt_parser = OptionParser.new do |opts|
+            opts.banner = @banner
+            
+            opts.on("-n", "--name <cert name>", "The name to use on the certificate") do |name| options.name = name end
+            
+        end
+        
+        opt_parser.parse!(args)
+        options
+    end
+    
+    def self.create(options)
+        
+        # create a key
+        key = OpenSSL::PKey::RSA.new 2048
+        
+        # write the private key out in pem format
+        open 'key.pem', 'w' do |io| io.write key.to_pem end
+        
+        # create a certificate to encrypt with
+        name = OpenSSL::X509::Name.parse options.name
+        
+        cert = OpenSSL::X509::Certificate.new
+        
+        cert.version    = 2
+        cert.serial     = 0
+        # make the certificate good for a year
+        cert.not_after  = Time.now
+        cert.not_before = Time.now + (60*60*24*365)
+        
+        cert.public_key = key.public_key
+        cert.subject    = name
+        cert.issuer     = name
+        
+        # write the cert in pem format
+        open 'cert.pem', 'w' do |io| io.write cert.to_pem end
+        
+    end
+    
+    def self.usage()
+        puts @banner
+    end
+end
+
+class HieraEhttpEncrypt
+    @banner = "Usage: hiera-ehttp encrypt [options]"
+    def self.parse(args)
+        options = OpenStruct.new
+        
+        options.strings = []
+        
+        opt_parser = OptionParser.new do |opts|
+            opts.banner = @banner
+            
+            opts.on("-c", "--certfile <certficate>", "Certificate to encrypt with") do |cert| options.certificate = cert end
+            opts.on("-s", "--string <value>", "String to encrypt (can use specify multiple times)") do |str| options.strings << str end
+            
+        end
+        
+        opt_parser.parse!(args)
+        options
+    end
+    
+    def self.encrypt(options)
+        cert = OpenSSL::X509::Certificate.new (File.read options.certificate)
+        cipher = OpenSSL::Cipher.new 'AES-128-CBC'
+        
+        encs = []
+        options.strings.each do |str|
+            encs << ("\"#{str}\":\"ENC[PKCS7," + (Base64.encode64 (OpenSSL::PKCS7::encrypt [cert], str, cipher, OpenSSL::PKCS7::BINARY).to_der).delete("\n\r") + "]\"\n")
+        end
+        encs
+    end
+    
+    def self.usage()
+        puts @banner
+    end
+end
+
+usage = "Usage: hiera-ehttp <action>"
+
+action, *args = ARGV
+
+if !action or action == 'help'
+   puts usage
+   exit
+end
+
+case action
+when 'keys'
+    options = HieraEhttpKeys.parse args
+    HieraEhttpKeys.create options
+
+when 'encrypt'
+    options = HieraEhttpEncrypt.parse args
+    (HieraEhttpEncrypt.encrypt options).each { |e| puts e }
+
+
+else
+    puts 'invalid action (valid actions: keys, encrypt)'
+end
