@@ -12,7 +12,7 @@ class Hiera
         
         @config = Config[:ehttp]
 
-        @http = Net::HTTP.new(@config[:host], @config[:port])
+        @http = Net::HTTP.new @config[:host], @config[:port]
         @http.read_timeout = @config[:http_read_timeout] || 10
         @http.open_timeout = @config[:http_connect_timeout] || 10
 
@@ -21,11 +21,11 @@ class Hiera
           if @config[:ssl_cert]
             @http.verify_mode = OpenSSL::SSL::VERIFY_PEER
             store = OpenSSL::X509::Store.new
-            store.add_cert(OpenSSL::X509::Certificate.new(File.read(@config[:ssl_ca_cert])))
+            store.add_cert OpenSSL::X509::Certificate.new File.read @config[:ssl_ca_cert]
             @http.cert_store = store
 
-            @http.key = OpenSSL::PKey::RSA.new(File.read(@config[:ssl_cert]))
-            @http.cert = OpenSSL::X509::Certificate.new(File.read(@config[:ssl_key]))
+            @http.key = OpenSSL::PKey::RSA.new File.read @config[:ssl_cert]
+            @http.cert = OpenSSL::X509::Certificate.new File.read @config[:ssl_key]
           end
         else
           @http.use_ssl = false
@@ -35,10 +35,9 @@ class Hiera
         @certfile = @config[:certfile]
 
         # we will read in the key and the cert
-        # then we will create a cipher object to use
         if @keyfile && @certfile
-          @key  = OpenSSL::PKey::RSA.new (File.read @keyfile)
-          @cert = OpenSSL::X509::Certificate.new (File.read @certfile)
+          @key  = OpenSSL::PKey::RSA.new File.read @keyfile
+          @cert = OpenSSL::X509::Certificate.new File.read @certfile
         end
       end
 
@@ -48,34 +47,36 @@ class Hiera
 
         answer = nil
 
-        paths = @config[:paths].map { |p| Backend.parse_string(p, scope, { 'key' => key }) }
-        paths.insert(0, order_override) if order_override
+        paths = @config[:paths].map { |p| Backend.parse_string p, scope, { 'key' => key } }
+        if order_override
+          paths.insert 0, order_override
+        end
 
 
         paths.each do |path|
 
-          Hiera.debug("[hiera-ehttp]: Lookup #{key} from #{@config[:host]}:#{@config[:port]}#{path}")
-          httpreq = Net::HTTP::Get.new(path)
+          Hiera.debug "[hiera-ehttp]: Lookup #{key} from #{@config[:host]}:#{@config[:port]}#{path}"
+          httpreq = Net::HTTP::Get.new path
 
           begin
-            httpres = @http.request(httpreq)
+            httpres = @http.request httpreq
           rescue Exception => e
-            Hiera.warn("[hiera-ehttp]: Net::HTTP threw exception #{e.message}")
+            Hiera.warn "[hiera-ehttp]: Net::HTTP threw exception #{e.message}"
             raise Exception, e.message unless @config[:failure] == 'graceful'
             next
           end
 
-          unless httpres.kind_of?(Net::HTTPSuccess)
-            Hiera.debug("[hiera-ehttp]: bad http response from #{@config[:host]}:#{@config[:port]}#{path}")
-            Hiera.debug("HTTP response code was #{httpres.code}")
+          unless httpres.kind_of? Net::HTTPSuccess
+            Hiera.debug "[hiera-ehttp]: bad http response from #{@config[:host]}:#{@config[:port]}#{path}"
+            Hiera.debug "HTTP response code was #{httpres.code}"
             raise Exception, 'Bad HTTP response' unless @config[:failure] == 'graceful'
             next
           end
 
-          result = self.parse_response(key, httpres.body)
+          result = self.parse_response key, httpres.body
           next unless result
 
-          parsed_result = Backend.parse_answer(result, scope)
+          parsed_result = Backend.parse_answer result, scope
 
           case resolution_type
           when :array
@@ -97,7 +98,7 @@ class Hiera
 
         return nil unless answer
 
-        Hiera.debug("[hiera-ehttp]: Query returned data, parsing response as #{@config[:output] || 'plain'}")
+        Hiera.debug "[hiera-ehttp]: Query returned data, parsing response as #{@config[:output] || 'plain'}"
 
         case @config[:output]
 
@@ -105,18 +106,18 @@ class Hiera
           # If JSON is specified as the output format, assume the output of the
           # endpoint URL is a JSON document and return keypart that matched our
           # lookup key
-          self.json_handler(key, answer)
+          self.json_handler key, answer
         when 'yaml'
           # If YAML is specified as the output format, assume the output of the
           # endpoint URL is a YAML document and return keypart that matched our
           # lookup key
-          self.yaml_handler(key, answer)
+          self.yaml_handler key, answer
         else
           # When the output format is configured as plain we assume that if the
           # endpoint URL returns an HTTP success then the contents of the response
           # body is the value itself, or nil.
           #
-          decrypt(answer)
+          decrypt answer
         end
       end
 
@@ -126,20 +127,19 @@ class Hiera
       #
       def json_handler(key, answer)
         require 'json'
-        self.decrypt(JSON.parse(answer)[key])
+        self.decrypt (JSON.parse answer)[key]
       end
 
       def yaml_handler(key, answer)
         require 'yaml'
-        self.decrypt(YAML.load(answer)[key])
+        self.decrypt (YAML.load answer)[key]
       end
 
       def decrypt(answer)
         if @keyfile && @certfile
           require 'base64'
-          if a = /ENC\[([^,]+),([^\]]+)\]/.match(answer)
-            # right now we only support PKCS7 (using a little 
-            #   reflective programming we can remedy this)
+          if a = /ENC\[([^,]+),([^\]]+)\]/.match answer
+            # right now we only support PKCS7
             if a[1] != 'PKCS7'
               Hiera.debug "[hiera-ehttp] #{a[1]} is an unsupported algorithm (supported: PKCS7)"
               raise Exception, 'Unsupported Algorithm' unless @config[:failure] == 'graceful'
