@@ -138,7 +138,7 @@ class Hiera
       def decrypt(answer)
         if @keyfile && @certfile
           require 'base64'
-          if a = /ENC\[([^,]+),([^\]]+)\]/.match answer
+          if a = /ENC\[([^,]+),([^\]]+)\]/.match(answer)
             # right now we only support PKCS7
             if a[1] != 'PKCS7'
               Hiera.debug "[hiera-ehttp] #{a[1]} is an unsupported algorithm (supported: PKCS7)"
