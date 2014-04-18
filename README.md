@@ -1,4 +1,4 @@
-hiera-enc-http
+hiera-ehttp
 ==============
 
 Description
@@ -9,43 +9,12 @@ This is a back end plugin for Hiera that allows lookup to be sourced from HTTP q
 Example Configuration
 ---------------------
 
-The following is a quickstart guide of how to get up and running using this hiera backend with CouchDB
+You can generate default keys with
 
-Get the CouchDB puppet module
-
-    cd $(puppet master --configprint modulepath | cut -f 1 -d":")
-    git clone https://github.com/camptocamp/puppet-couchdb.git
-
-Now lets install CouchDB and hiera-ehttp
-
-couch.pp
-    
-    # We will just install CouchDB with defualt parameters
-    # Not the most secure thing ever but it will do for now
-    class { '::couchdb': }
-  
-    package { 'hiera-ehttp':
-      ensure   => 'installed',
-      provider => 'gem',
-    }
-
-Then apply the manifest with `puppet apply couch.pp`
-
-Then lets create a key/certificate
-
-    mkdir -p /etc/puppet/keys && cd /etc/puppet/keys
     hiera-ehttp keys -n "CN=hiera-http/DC=neverland"
-    
-You probably want to copy the certificate to whatever machine you use for development
-    
-By default the certificate is good for one year, both the key and the certificate are needed for decryption,
-however only the certificate is needed for encryption.
 
-Then we need to add the backend to our hiera config
+Grab the hiera-ehttp gem and then add this to your hiera config file
 
-hiera.yaml
-
-    ---
     :backends:
       - ehttp
 
@@ -59,9 +28,11 @@ hiera.yaml
       :paths:
         - /hiera/%{fqdn}
         - /hiera/defaults
-        
-Now all you need to is create the database and add the document.    
 
+
+Using the command line utility you can encrypt a value
+
+    hiera-ehttp encrypt -c cert.pem -s "secret value"
 
 Configuration Parameters
 ------------------------
