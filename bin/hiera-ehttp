@@ -13,6 +13,8 @@ class HieraEhttpKeys
     def self.parse(args)
         options = OpenStruct.new
         
+        # set the default cert name
+        options.name = "CN=hiera-http/DC=neverland"
         
         opt_parser = OptionParser.new do |opts|
             opts.banner = @banner
@@ -59,17 +61,20 @@ class HieraEhttpKeys
 end
 
 class HieraEhttpEncrypt
-    @banner = "Usage: hiera-ehttp encrypt [options]"
+    @banner  = "Usage: hiera-ehttp encrypt [options]"
+    
     def self.parse(args)
         options = OpenStruct.new
-        
+    
         options.strings = []
         
         opt_parser = OptionParser.new do |opts|
             opts.banner = @banner
             
             opts.on("-c", "--certfile <certficate>", "Certificate to encrypt with") do |cert| options.certificate = cert end
-            opts.on("-s", "--string <value>", "String to encrypt (can use specify multiple times)") do |str| options.strings << str end
+            opts.on("-s", "--string <value>", "String to encrypt") do |str| options.strings << str end
+            #opts.on("-j", "--json <file>", "Encrypt all of the values in a json file") do |file| options.jsons << file end
+            #opts.on("-y", "--yaml <file>", "Encrypt all of the values in a yaml file") do |file| options.yamls << file end
             
         end
         
@@ -78,14 +83,29 @@ class HieraEhttpEncrypt
     end
     
     def self.encrypt(options)
+        # read in the certificate and create the cipher object
         cert = OpenSSL::X509::Certificate.new (File.read options.certificate)
         cipher = OpenSSL::Cipher.new 'AES-128-CBC'
         
+        # encrypt strings, jsons, and yamls
+        strings options.strings, cert, cipher
+        #jsons   options.jsons,   cert, cipher
+        #yamls   options.yamls,   cert, cipher
+    end
+    
+    def self.strings(strings, cert, cipher)
         encs = []
-        options.strings.each do |str|
-            encs << ("\"#{str}\":\"ENC[PKCS7," + (Base64.encode64 (OpenSSL::PKCS7::encrypt [cert], str, cipher, OpenSSL::PKCS7::BINARY).to_der).delete("\n\r") + "]\"\n")
+        strings.each do |str|
+            puts ("\"#{str}\":\"ENC[PKCS7," + (Base64.encode64 (OpenSSL::PKCS7::encrypt [cert], str, cipher, OpenSSL::PKCS7::BINARY).to_der).delete("\n\r") + "]\"\n")
         end
-        encs
+    end
+    
+    def self.jsons(jsons, cert, cipher)
+        puts "Encryption on json files unimplimented... Skiping"
+    end
+    
+    def self.yamls(yamls, cert, cipher)
+        puts "Encryption on yaml files unimplimented... Skiping"
     end
     
     def self.usage()
@@ -109,7 +129,7 @@ when 'keys'
 
 when 'encrypt'
     options = HieraEhttpEncrypt.parse args
-    (HieraEhttpEncrypt.encrypt options).each { |e| puts e }
+    HieraEhttpEncrypt.encrypt options
 
 
 else
