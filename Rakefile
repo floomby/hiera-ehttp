@@ -3,7 +3,7 @@ require 'rubygems/package_task'
 
 spec = Gem::Specification.new do |gem|
     gem.name         = "hiera-ehttp"
-    gem.version      = "0.0.1"
+    gem.version      = "0.0.2rc1"
     
     gem.author       = "Josh Hoover"
     gem.email        = "floomby@nmt.edu"
