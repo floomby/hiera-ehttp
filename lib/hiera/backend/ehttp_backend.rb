@@ -8,8 +8,6 @@ class Hiera
 
       def initialize
         
-        Hiera.debug "test"
-        
         @config = Config[:ehttp]
 
         @http = Net::HTTP.new @config[:host], @config[:port]
@@ -42,8 +40,6 @@ class Hiera
       end
 
       def lookup(key, scope, order_override, resolution_type)
-
-        Hiera.debug "test"
 
         answer = nil
 
