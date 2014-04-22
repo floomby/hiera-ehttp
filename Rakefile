@@ -2,11 +2,11 @@ require 'rubygems'
 require 'rubygems/package_task'
 
 spec = Gem::Specification.new do |gem|
-    gem.name         = "hiera-ehttp"
-    gem.version      = "0.0.2"
+    gem.name         = File.basename(`git rev-parse --show-toplevel`).chop
+    gem.version      = `gitver version`
     
-    gem.author       = "Josh Hoover"
-    gem.email        = "floomby@nmt.edu"
+    gem.author       = `git config --get user.name`
+    gem.email        = `git config --get user.email`
     gem.homepage     = "http://github.com/floomby/hiera-ehttp"
     gem.summary      = "HTTP backend for Hiera supporting encrypted entries"
     gem.description  = "Hiera backend for looking up data over HTTP APIs with support for encrypted values"
