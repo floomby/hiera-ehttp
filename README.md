@@ -33,6 +33,10 @@ Grab the hiera-ehttp gem and then add this to your hiera config file
 Using the command line utility you can encrypt a value
 
     hiera-ehttp encrypt -c cert.pem -s "secret value"
+    
+The command line utility also supports the rest api that
+couch uses. All the other apis are sad, but I will try to
+make them happier as time permits.
 
 Configuration Parameters
 ------------------------
@@ -82,5 +86,5 @@ make an issue so I know, or create a fix and create a pull request.
 Credits
 -------
 
-* Much of this code comes from the original hiera-http created by Craig Dunn <craig@craigdunn.org>
-* SSL components contributed from Ben Ford <ben.ford@puppetlabs.com>
+ * Much of this code comes from the original hiera-http created by Craig Dunn <craig@craigdunn.org>
+ * SSL components contributed from Ben Ford <ben.ford@puppetlabs.com>

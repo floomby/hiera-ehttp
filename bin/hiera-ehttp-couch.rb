@@ -40,8 +40,6 @@ module HieraEhttp
                 opts.on("-d", "--document <document>", "Document to use")       { |doc|  options.document =  doc  }
             end
             
-            raise OptionParser::MissingArgument if options[:cert].nil?
-            
             opt_parser.parse! args
             options
         end
