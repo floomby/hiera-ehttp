@@ -39,7 +39,9 @@ module HieraEhttp
                 opts.on("-b", "--database <database>", "Database to use")       { |db|   options.database =  db   }
                 opts.on("-d", "--document <document>", "Document to use")       { |doc|  options.document =  doc  }
             end
-        
+            
+            raise OptionParser::MissingArgument if options[:cert].nil?
+            
             opt_parser.parse! args
             options
         end

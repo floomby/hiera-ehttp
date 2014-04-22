@@ -154,5 +154,5 @@ when 'couch'
     HieraEhttp::HieraEhttpCouch.go options
 
 else
-    puts 'invalid action (valid actions: keys, encrypt)'
+    puts 'invalid action (valid actions: keys, encrypt, couch)'
 end

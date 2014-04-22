@@ -17,10 +17,6 @@ require 'ostruct'
 # version. This introduce races, but I don't care
 # right now in this case
 
-
-# TODO: it would be realy cool to have this
-#       inherit a ruby hash
-
 class CouchDocument
     # all documents will be created by json
     # either from the database or internaly
@@ -79,7 +75,7 @@ class Couch
         req = Net::HTTP::Put.new "/#{name}"
         ret = @http.request req
         
-        puts "Creating Database #{name} => #{ret.msg}\n"
+        puts "Creating Database #{name} => #{ret.msg} (#{ret.code})\n"
         
     end
     
@@ -88,7 +84,7 @@ class Couch
         req = Net::HTTP::Delete.new "/#{name}"
         ret = @http.request req
         
-        puts "Deleting Database #{name} => #{ret.msg}\n"
+        puts "Deleting Database #{name} => #{ret.msg} (#{ret.code})\n"
         
     end
     
@@ -115,10 +111,23 @@ class Couch
         req.body = JSON.dump doc.data
         ret = @http.request req
         
-        puts "Putting Document #{db_name}/#{doc_name} => #{ret.msg}\n"
+        if ret.code == '200'
+            
+            puts "Succesfuly Putting Document #{db_name}/#{doc_name} => #{ret.msg} (#{ret.code})\n"
+            
+            # lets delete the old revsion
+            delete_
+            
+        else
+            puts "Error Putting Document #{db_name}/#{doc_name} => #{ret.msg} (#{ret.code})\n"
+        end
+    end
+    
+    def delete_doc db_name, doc_name, doc
+        
+        
         
     end
-
 end
 
 
